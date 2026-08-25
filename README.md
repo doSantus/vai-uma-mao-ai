@@ -1,4 +1,4 @@
-# ServiçoPerto
+# Vai uma mão ai
 
 Aplicativo mobile que conecta clientes a prestadores de serviço autônomos
 da mesma cidade/estado, por meio de busca com filtros e contato direto via
@@ -8,7 +8,7 @@ WhatsApp.
 
 ## Descrição da aplicação
 
-O ServiçoPerto permite que prestadores de serviço (eletricistas, diaristas,
+O "Vai uma mão ai" permite que prestadores de serviço (eletricistas, diaristas,
 professores particulares, cabeleireiros, pintores, etc.) se cadastrem com
 seus dados e área de atuação, e que clientes busquem esses prestadores
 filtrando por cidade, estado e categoria de serviço, entrando em contato
@@ -18,7 +18,7 @@ diretamente pelo WhatsApp.
 
 Hoje a busca por prestadores de serviço costuma depender de indicações
 informais (grupos de WhatsApp, redes sociais, boca a boca), o que é lento e
-pouco confiável. O ServiçoPerto centraliza essa busca em um único app,
+pouco confiável. O "Vai uma mão ai" centraliza essa busca em um único app,
 simples e gratuito tanto para quem procura quanto para quem oferece o
 serviço.
 

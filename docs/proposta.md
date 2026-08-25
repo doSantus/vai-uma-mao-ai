@@ -1,4 +1,4 @@
-# Proposta e Planejamento da Aplicação Mobile — Etapa 01
+# Proposta e Planejamento da Aplicação Mobile - Etapa 01
 
 ## 1. Vai uma mão ai
 
@@ -11,7 +11,7 @@ busca lenta, pouco confiável e limitada a quem já conhece alguém. Do outro
 lado, prestadores de serviço autônomos não têm um canal simples e gratuito
 para se divulgar dentro da própria região.
 
-O ServiçoPerto resolve esse problema conectando **clientes** que procuram um
+O "Vai uma mão ai" resolve esse problema conectando **clientes** que procuram um
 serviço a **prestadores** cadastrados na mesma cidade/estado, por meio de uma
 busca simples com filtros.
 
@@ -125,7 +125,7 @@ Sim. A aplicação irá se comunicar com:
 
 ## 12. Repositório Git contendo o projeto inicial
 
-Repositório: `https://github.com/<seu-usuario>/ServicoPerto`
+Repositório: `https://github.com/doSantus/vai-uma-mao-ai.git`
 
 Tag da entrega desta etapa: **etapa-01**
 
