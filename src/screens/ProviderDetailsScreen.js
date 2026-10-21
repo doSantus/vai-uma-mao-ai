@@ -6,10 +6,18 @@ import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
+import FavoriteButton from '../components/FavoriteButton';
+import { useData } from '../context/DataContext';
 import { colors, spacing, radius, typography } from '../theme';
 
 export default function ProviderDetailsScreen({ route, navigation }) {
-  const { provider } = route.params;
+  const { providers } = useData();
+  const provider = providers.find((item) => item.id === route.params?.providerId);
+
+  if (!provider) return <Screen scroll>
+    <Text style={styles.description}>Este cadastro não está mais disponível.</Text>
+    <Button title="Voltar" onPress={() => navigation.goBack()} />
+  </Screen>;
 
   function handleWhatsApp() {
     const message = encodeURIComponent(
@@ -23,7 +31,7 @@ export default function ProviderDetailsScreen({ route, navigation }) {
 
   return (
     <Screen scroll>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={22} color={colors.text} />
       </TouchableOpacity>
 
@@ -31,6 +39,7 @@ export default function ProviderDetailsScreen({ route, navigation }) {
         <Avatar name={provider.name} size={80} />
         <Text style={styles.name}>{provider.name}</Text>
         <Badge label={provider.category} />
+        <FavoriteButton provider={provider} />
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.location}>
@@ -56,7 +65,7 @@ export default function ProviderDetailsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  backButton: { paddingVertical: spacing.sm, width: 40 },
+  backButton: { paddingVertical: spacing.sm, width: 48, minHeight: 48 },
   profileHeader: { alignItems: 'center', marginBottom: spacing.lg },
   name: { ...typography.h2, color: colors.text, marginTop: spacing.sm, marginBottom: 6 },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },

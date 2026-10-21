@@ -23,7 +23,13 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir que Vai uma mão ai use sua localização para preencher cidade e estado na busca de profissionais."
+        }
+      ]
     ]
   }
 }

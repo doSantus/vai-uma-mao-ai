@@ -18,6 +18,8 @@ export default function Input({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   style,
+  accessibilityLabel,
+  ...inputProps
 }) {
   const [focused, setFocused] = useState(false);
 
@@ -34,6 +36,8 @@ export default function Input({
       >
         {icon}
         <TextInput
+          {...inputProps}
+          accessibilityLabel={accessibilityLabel || label || placeholder}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

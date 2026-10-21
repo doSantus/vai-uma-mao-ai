@@ -1,31 +1,46 @@
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
 import Button from '../components/Button';
+import { useData } from '../context/DataContext';
 import { colors, spacing, radius, typography } from '../theme';
 
 const menuItems = [
   { icon: 'briefcase-outline', label: 'Meu perfil de prestador', action: 'ProviderForm' },
-  { icon: 'heart-outline', label: 'Favoritos (em breve)' },
+  { icon: 'heart-outline', label: 'Favoritos', action: 'Favoritos' },
   { icon: 'notifications-outline', label: 'Notificações (em breve)' },
   { icon: 'shield-checkmark-outline', label: 'Privacidade e segurança (em breve)' },
 ];
 
 export default function ProfileScreen({ navigation }) {
+  const { profile, session, signOut } = useData();
+  const [leaving, setLeaving] = useState(false);
+  const pending = useRef(false);
+  const displayName = profile?.name || session?.name || session?.email || 'Usuário';
+  async function handleSignOut() {
+    if (pending.current) return;
+    pending.current = true;
+    setLeaving(true);
+    try { await signOut(); }
+    catch { Alert.alert('Não foi possível sair', 'Sua sessão continua ativa. Tente novamente.'); }
+    finally { pending.current = false; setLeaving(false); }
+  }
   return (
     <Screen scroll>
       <View style={styles.header}>
-        <Avatar name="Usuário Demonstração" size={72} />
-        <Text style={styles.name}>Usuário Demonstração</Text>
-        <Text style={styles.email}>usuario@email.com</Text>
+        <Avatar name={displayName} size={72} />
+        <Text style={styles.name}>{displayName}</Text>
+        <Text style={styles.email}>{session?.email}</Text>
       </View>
 
       <View style={styles.menu}>
         {menuItems.map((item, index) => (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !item.action }}
             key={item.label}
             style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
             onPress={() => item.action && navigation.navigate(item.action)}
@@ -41,7 +56,8 @@ export default function ProfileScreen({ navigation }) {
       <Button
         title="Sair"
         variant="outline"
-        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}
+        loading={leaving}
+        onPress={handleSignOut}
         style={styles.logoutButton}
       />
     </Screen>

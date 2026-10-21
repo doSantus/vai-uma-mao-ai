@@ -1,30 +1,39 @@
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useData } from '../context/DataContext';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import SegmentedControl from '../components/SegmentedControl';
 import { colors, spacing, typography } from '../theme';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen() {
+  const { signIn } = useData();
+  const pending = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState('login');
-  const [role, setRole] = useState('cliente');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (pending.current) return;
     const newErrors = {};
-    if (mode === 'register' && !name.trim()) newErrors.name = 'Informe seu nome';
-    if (!email.trim()) newErrors.email = 'Informe seu e-mail';
+    if (mode === 'register' && name.trim().split(/\s+/).length < 2) newErrors.name = 'Informe seu nome completo';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) newErrors.email = 'Informe um e-mail válido';
     if (!password.trim()) newErrors.password = 'Informe sua senha';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    pending.current = true;
+    setSaving(true);
+    try {
+      await signIn({ email, name: mode === 'register' ? name.trim().replace(/\s+/g, ' ') : '' });
+    } catch {
+      Alert.alert('Não foi possível entrar', 'Não foi possível salvar sua sessão. Tente novamente.');
+    } finally { pending.current = false; setSaving(false); }
   }
 
   return (
@@ -48,20 +57,12 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionLabel}>Eu sou:</Text>
-      <SegmentedControl
-        options={[
-          { label: 'Cliente', value: 'cliente' },
-          { label: 'Prestador', value: 'prestador' },
-        ]}
-        selected={role}
-        onSelect={setRole}
-      />
-
       {mode === 'register' && (
         <Input
           label="Nome completo"
-          placeholder="Como podemos te chamar?"
+          placeholder="Seu nome e sobrenome"
+          autoCapitalize="words"
+          autoComplete="name"
           value={name}
           onChangeText={setName}
           error={errors.name}
@@ -87,10 +88,10 @@ export default function LoginScreen({ navigation }) {
         error={errors.password}
       />
 
-      <Button title={mode === 'login' ? 'Entrar' : 'Criar conta'} onPress={handleSubmit} style={styles.submitButton} />
+      <Button title={mode === 'login' ? 'Entrar' : 'Criar conta'} loading={saving} onPress={handleSubmit} style={styles.submitButton} />
 
       <Text style={styles.disclaimer}>
-        Etapa 02: tela funcional apenas na camada visual, sem autenticação real.
+        Acesso demonstrativo, sem autenticação real. Você continuará conectado até tocar em Sair. Sua senha não é armazenada.
       </Text>
     </Screen>
   );
@@ -114,7 +115,6 @@ const styles = StyleSheet.create({
   tabText: { ...typography.bodyBold, color: colors.textSecondary },
   tabTextActive: { color: colors.primary },
   tabIndicator: { height: 2, backgroundColor: colors.primary, width: '60%', marginTop: 6, borderRadius: 2 },
-  sectionLabel: { ...typography.small, fontWeight: '600', color: colors.text, marginBottom: spacing.xs },
   submitButton: { marginTop: spacing.sm },
   disclaimer: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
 });
