@@ -1,5 +1,6 @@
 
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, Linking, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
@@ -8,11 +9,26 @@ import Badge from '../components/Badge';
 import Button from '../components/Button';
 import FavoriteButton from '../components/FavoriteButton';
 import { useData } from '../context/DataContext';
+import { errorMessage } from '../services/errors';
 import { colors, spacing, radius, typography } from '../theme';
 
 export default function ProviderDetailsScreen({ route, navigation }) {
-  const { providers } = useData();
-  const provider = providers.find((item) => item.id === route.params?.providerId);
+  const data=useData();
+  const api=useRef(data);
+  api.current=data;
+  const [provider,setProvider]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [retry,setRetry]=useState(0);
+  useFocusEffect(useCallback(()=>{
+    let active=true;setLoading(true);setError('');
+    api.current.getProvider(route.params?.providerId).then(value=>{if(active)setProvider(value);})
+      .catch(e=>{if(active)setError(errorMessage(e));}).finally(()=>{if(active)setLoading(false);});
+    return()=>{active=false;};
+  },[route.params?.providerId,retry]));
+  if(loading||error)return <Screen scroll><Text style={styles.description}>{loading?'Carregando profissional...':error}</Text>
+    {!!error&&<Button title="Tentar novamente" onPress={()=>setRetry(value=>value+1)}/>}
+    <Button title="Voltar" variant="ghost" onPress={()=>navigation.goBack()}/></Screen>;
 
   if (!provider) return <Screen scroll>
     <Text style={styles.description}>Este cadastro não está mais disponível.</Text>
@@ -51,6 +67,8 @@ export default function ProviderDetailsScreen({ route, navigation }) {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Sobre o serviço</Text>
         <Text style={styles.description}>{provider.description}</Text>
+        {!!provider.serviceModes?.length && <><Text style={styles.sectionTitle}>Forma de atendimento</Text><Text style={styles.description}>{provider.serviceModes.join(' • ')}</Text></>}
+        {!!provider.regions && <><Text style={styles.sectionTitle}>Regiões atendidas</Text><Text style={styles.description}>{provider.regions}</Text></>}
       </View>
 
       <Button

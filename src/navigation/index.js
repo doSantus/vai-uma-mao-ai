@@ -11,6 +11,8 @@ import ProviderDetailsScreen from '../screens/ProviderDetailsScreen';
 import ProviderFormScreen from '../screens/ProviderFormScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import { colors } from '../theme';
 import { useData } from '../context/DataContext';
 
@@ -73,13 +75,18 @@ function MainTabsNavigator() {
 }
 
 export default function AppNavigator() {
-  const { session } = useData();
+  const { session, onboarding, onboardingStep, recovery } = useData();
+  const flow = !session ? 'login' : recovery ? 'recovery' : onboarding === 'choice' ? 'onboarding' : 'main';
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <RootStack.Navigator key={session?.email || 'signed-out'} screenOptions={{ headerShown: false }}>
+        <RootStack.Navigator key={`${session?.id || 'signed-out'}-${flow}`}
+          initialRouteName={flow === 'onboarding' && onboardingStep === 'provider_form' ? 'ProviderForm' : undefined}
+          screenOptions={{ headerShown: false }}>
           {session
-            ? <RootStack.Screen name="Main" component={MainTabsNavigator} />
+            ? recovery ? <RootStack.Screen name="ResetPassword" component={ResetPasswordScreen} /> : onboarding === 'choice'
+              ? <><RootStack.Screen name="Onboarding" component={OnboardingScreen} /><RootStack.Screen name="ProviderForm" component={ProviderFormScreen} /></>
+              : <RootStack.Screen name="Main" component={MainTabsNavigator} />
             : <RootStack.Screen name="Login" component={LoginScreen} />}
         </RootStack.Navigator>
       </NavigationContainer>

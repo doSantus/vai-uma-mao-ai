@@ -6,6 +6,7 @@ import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
 import Button from '../components/Button';
 import { useData } from '../context/DataContext';
+import { errorMessage } from '../services/errors';
 import { colors, spacing, radius, typography } from '../theme';
 
 const menuItems = [
@@ -16,17 +17,25 @@ const menuItems = [
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { profile, session, signOut } = useData();
+  const { profile, providerDraft, session, signOut, beginProvider } = useData();
   const [leaving, setLeaving] = useState(false);
   const pending = useRef(false);
-  const displayName = profile?.name || session?.name || session?.email || 'Usuário';
+  const displayName = session?.name || profile?.name || session?.email || 'Usuário';
   async function handleSignOut() {
     if (pending.current) return;
     pending.current = true;
     setLeaving(true);
     try { await signOut(); }
-    catch { Alert.alert('Não foi possível sair', 'Sua sessão continua ativa. Tente novamente.'); }
+    catch (error) { Alert.alert('Não foi possível sair', errorMessage(error)); }
     finally { pending.current = false; setLeaving(false); }
+  }
+  async function openItem(item) {
+    if (!item.action || pending.current) return;
+    if (item.action !== 'ProviderForm' || profile || providerDraft) { navigation.navigate(item.action); return; }
+    pending.current=true;setLeaving(true);
+    try { await beginProvider();navigation.navigate('ProviderForm'); }
+    catch(error) { Alert.alert('Não foi possível abrir o cadastro',errorMessage(error)); }
+    finally {pending.current=false;setLeaving(false);}
   }
   return (
     <Screen scroll>
@@ -34,6 +43,7 @@ export default function ProfileScreen({ navigation }) {
         <Avatar name={displayName} size={72} />
         <Text style={styles.name}>{displayName}</Text>
         <Text style={styles.email}>{session?.email}</Text>
+        <Text style={styles.email}>{profile ? 'Perfil profissional publicado' : providerDraft ? 'Cadastro profissional em rascunho' : 'Você pode buscar e divulgar serviços'}</Text>
       </View>
 
       <View style={styles.menu}>
@@ -43,11 +53,11 @@ export default function ProfileScreen({ navigation }) {
             accessibilityState={{ disabled: !item.action }}
             key={item.label}
             style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
-            onPress={() => item.action && navigation.navigate(item.action)}
-            disabled={!item.action}
+            onPress={() => openItem(item)}
+            disabled={!item.action || leaving}
           >
             <Ionicons name={item.icon} size={20} color={colors.primary} />
-            <Text style={styles.menuLabel}>{item.label}</Text>
+            <Text style={styles.menuLabel}>{item.action === 'ProviderForm' ? profile ? 'Meu perfil de prestador' : providerDraft ? 'Concluir cadastro de prestador' : 'Divulgar meus serviços' : item.label}</Text>
             {item.action && <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />}
           </TouchableOpacity>
         ))}

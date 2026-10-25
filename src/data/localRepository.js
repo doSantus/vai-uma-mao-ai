@@ -4,6 +4,11 @@ const normalizeEmail = (email) => email.trim().toLowerCase();
 const validEmail = (email) => typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 // Tipos antigos continuam legíveis para preservar as instalações existentes.
 const validRole = (role) => ['conta', 'cliente', 'prestador'].includes(role);
+const validModes = (modes) => modes === undefined || (Array.isArray(modes)
+  && modes.every((mode) => ['No endereço do cliente', 'Em local próprio', 'Online'].includes(mode)));
+const validDraft = (draft) => draft == null || (typeof draft === 'object'
+  && ['name', 'city', 'state', 'phone', 'description', 'regions'].every((key) => typeof draft[key] === 'string')
+  && (draft.category === null || typeof draft.category === 'string') && validModes(draft.serviceModes));
 
 function validRecords(data) {
   const fields = ['id', 'name', 'category', 'city', 'state', 'phone', 'description'];
@@ -15,7 +20,9 @@ function validRecords(data) {
 function validate(data) {
   if (!data || data.version !== 2 || !Array.isArray(data.accounts)
     || !data.accounts.every((account) => validEmail(account.email) && account.email === normalizeEmail(account.email)
-      && typeof account.name === 'string' && validRole(account.role) && validRecords(account))
+      && typeof account.name === 'string' && validRole(account.role) && validRecords(account)
+      && (account.onboarding === undefined || ['choice', 'complete'].includes(account.onboarding))
+      && validDraft(account.providerDraft) && validModes(account.profile?.serviceModes))
     || new Set(data.accounts.map((account) => account.email)).size !== data.accounts.length
     || !(data.legacyData === null || validRecords(data.legacyData))
     || !(data.session === null || (validEmail(data.session?.email)
@@ -35,6 +42,7 @@ export function createLocalRepository(storage, examples) {
       session: account ? { email: account.email, name: account.name, role: account.role } : null,
       profile: account?.profile || null,
       favoriteIds: account?.favoriteIds || [],
+      ...(account?.onboarding ? { onboarding: account.onboarding, providerDraft: account.providerDraft || null } : {}),
     };
   };
 
@@ -72,25 +80,28 @@ export function createLocalRepository(storage, examples) {
 
   return {
     load,
-    signIn: ({ email, name = '', role = 'conta' }) => mutate((data) => {
+    signIn: ({ email, name = '', role = 'conta', onboarding }) => mutate((data) => {
       const normalized = normalizeEmail(email);
       if (!validEmail(normalized) || !validRole(role) || typeof name !== 'string') throw new Error('Informe e-mail e tipo de acesso válidos.');
       const existing = data.accounts.find((account) => account.email === normalized);
       const account = existing
         ? { ...existing, name: name.trim() || existing.name, role }
-        : { email: normalized, name: name.trim(), role, ...(data.legacyData || { profile: null, favoriteIds: [] }) };
+        : { email: normalized, name: name.trim(), role, ...(onboarding ? { onboarding, providerDraft: null } : {}), ...(data.legacyData || { profile: null, favoriteIds: [] }) };
       return {
         ...data, session: { email: normalized }, legacyData: null,
         accounts: [...data.accounts.filter((item) => item.email !== normalized), account],
       };
     }),
     signOut: () => mutate((data) => ({ ...data, session: null })),
+    completeOnboarding: () => changeAccount((account) => ({ ...account, onboarding: 'complete' })),
+    saveProviderDraft: (draft) => changeAccount((account) => ({ ...account, providerDraft: draft, onboarding: 'complete' })),
     saveProfile: (profile) => changeAccount((account) => ({
       ...account,
+      ...(account.onboarding ? { onboarding: 'complete', providerDraft: null } : {}),
       profile: { ...profile, id: account.profile?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2)}` },
     })),
     deleteProfile: () => changeAccount((account) => ({
-      ...account, profile: null,
+      ...account, profile: null, providerDraft: null,
       favoriteIds: account.favoriteIds.filter((id) => id !== account.profile?.id),
     })),
     toggleFavorite: (id) => changeAccount((account) => {
