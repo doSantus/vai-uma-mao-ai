@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { TouchableOpacity, ActivityIndicator, Alert, AccessibilityInfo, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useData } from '../context/DataContext';
+import { errorMessage } from '../services/errors';
 import { colors } from '../theme';
 
 export default function FavoriteButton({ provider }) {
@@ -16,8 +17,8 @@ export default function FavoriteButton({ provider }) {
     try {
       await toggleFavorite(provider.id);
       AccessibilityInfo.announceForAccessibility(favorite ? 'Removido dos favoritos.' : 'Adicionado aos favoritos.');
-    } catch {
-      Alert.alert('Não foi possível salvar', 'O favorito não foi alterado. Tente novamente.');
+    } catch (error) {
+      Alert.alert('Não foi possível salvar', errorMessage(error));
     } finally { pending.current = false; setSaving(false); }
   }
   return <TouchableOpacity

@@ -12,6 +12,47 @@ const examples = [{ id: '1', name: 'Exemplo' }, { id: '2', name: 'Outro exemplo'
 const account = { email: 'teste@example.com', name: 'Teste', role: 'prestador' };
 const profile = { name: 'João Teste', category: 'Eletricista', city: 'Goiânia', state: 'GO', phone: '5562999990000', description: 'Instalações' };
 
+test('primeiro acesso e rascunho persistem sem publicar e ficam separados por conta', async () => {
+  const f = fixture();
+  let repo = f.open();
+  await repo.load();
+  await repo.signIn({ ...account, onboarding: 'choice' });
+  repo = f.open();
+  assert.equal((await repo.load()).onboarding, 'choice');
+  const draft = { ...profile, category: null, regions: 'Centro', serviceModes: ['Online'] };
+  await repo.saveProviderDraft(draft);
+  let data = await f.open().load();
+  assert.equal(data.onboarding, 'complete');
+  assert.equal(data.profile, null);
+  assert.deepEqual(data.providerDraft, draft);
+  await repo.signOut();
+  data = await repo.signIn({ email: 'outra@example.com', onboarding: 'choice' });
+  assert.equal(data.providerDraft, null);
+  await repo.completeOnboarding();
+  await repo.signOut();
+  data = await repo.signIn({ ...account, onboarding: 'choice' });
+  assert.equal(data.onboarding, 'complete');
+  assert.deepEqual(data.providerDraft, draft);
+  await repo.saveProfile({ ...draft, category: profile.category });
+  data = await f.open().load();
+  assert.equal(data.providerDraft, null);
+  assert.deepEqual(data.profile.serviceModes, ['Online']);
+  assert.equal(data.profile.regions, 'Centro');
+  await repo.deleteProfile();
+  assert.equal((await f.open().load()).session.name, account.name);
+});
+
+test('falha ao salvar escolha ou rascunho preserva primeiro acesso pendente', async () => {
+  const f = fixture();
+  const repo = f.open();
+  await repo.load();
+  await repo.signIn({ ...account, onboarding: 'choice' });
+  f.storage.setItem = async () => { throw new Error('falha'); };
+  await assert.rejects(repo.completeOnboarding());
+  await assert.rejects(repo.saveProviderDraft({ ...profile, regions: '', serviceModes: [] }));
+  assert.equal((await f.open().load()).onboarding, 'choice');
+});
+
 test('conta única não exige tipo de acesso nem nome para persistir a sessão', async () => {
   const f = fixture();
   const repo = f.open();

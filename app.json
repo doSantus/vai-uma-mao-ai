@@ -2,12 +2,10 @@
   "expo": {
     "name": "Vai uma mão ai",
     "slug": "vai-uma-mao-ai",
+    "scheme": "vaiumamaoai",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#2E7D6B"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -23,13 +21,21 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#2E7D6B"
+        }
+      ],
       "expo-status-bar",
       [
         "expo-location",
         {
           "locationWhenInUsePermission": "Permitir que Vai uma mão ai use sua localização para preencher cidade e estado na busca de profissionais."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ]
   }
 }

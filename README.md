@@ -1,198 +1,155 @@
 # Vai uma mão ai
 
-> **Cadastro atual:** conta única, com nome completo, e-mail e senha de demonstração.
-> Não há seleção Cliente/Prestador nem configuração para alterar o tipo de conta.
-> O nome do novo cadastro fica apenas em memória, preenchendo o perfil e o nome de
-> um novo cadastro de prestador. Sair ou encerrar o app descarta esse rascunho.
-> A sessão por e-mail e os favoritos mantêm a persistência anterior. Se o usuário
-> salvar explicitamente o formulário de prestador, seus campos continuam persistentes.
-> As referências a modos Cliente/Prestador abaixo descrevem a versão anterior;
-> os dados antigos seguem compatíveis, mas o seletor não faz parte da interface atual.
+Aplicativo mobile para encontrar prestadores por profissão, cidade e estado, salvar
+favoritos e entrar em contato pelo WhatsApp. Toda pessoa cria uma conta única e pode
+optar por divulgar serviços depois do cadastro.
 
-Aplicativo mobile que conecta clientes a prestadores de serviço autônomos
-da mesma cidade/estado, por meio de busca com filtros e contato direto via
-WhatsApp.
+## Etapa 5 e situação da entrega
 
-> Proposta completa da Etapa 01: [`docs/proposta.md`](docs/proposta.md)
-> Documentação da Etapa 02 (interface e navegação): [`docs/etapa-02.md`](docs/etapa-02.md)
-> Documentação da Etapa 04 (persistência local): [`docs/etapa-04.md`](docs/etapa-04.md)
+A integração com **Supabase Auth + PostgreSQL** está implementada no código, incluindo
+migração SQL, regras de acesso, autenticação por senha, confirmação por código,
+recuperação de senha e Google por OAuth/PKCE. Os testes locais incluem execução das
+regras de banco e chamadas HTTP com respostas controladas.
 
-## Descrição da aplicação
+**Situação em 25/10/2026:** o projeto Supabase foi criado, o ambiente local foi conectado
+e a migração foi executada com sucesso. A API reconhece as quatro tabelas e nega acesso
+anônimo. A confirmação de e-mail está habilitada. O responsável configurou SMTP e
+relatou testes de cadastro no aplicativo. Ainda falta concluir e registrar o roteiro
+completo com duas contas, recuperação de senha e Google; o Google continua desabilitado.
+Sem URL e chave pública válidas, o aplicativo mostra a tela de configuração; não simula login.
 
-O "Vai uma mão ai" permite que prestadores de serviço (eletricistas, diaristas,
-professores particulares, cabeleireiros, pintores, etc.) se cadastrem com
-seus dados e área de atuação, e que clientes busquem esses prestadores
-filtrando por cidade, estado e categoria de serviço, entrando em contato
-diretamente pelo WhatsApp.
+- [Documentação completa da Etapa 5](docs/etapa-05.md)
+- [Proposta original](docs/proposta.md)
+- [Etapa 2](docs/etapa-02.md) e [Etapa 4](docs/etapa-04.md), referentes às versões anteriores
 
-## Problema que a aplicação resolve
+## Mudança de Firebase para Supabase
 
-Hoje a busca por prestadores de serviço costuma depender de indicações
-informais (grupos de WhatsApp, redes sociais, boca a boca), o que é lento e
-pouco confiável. O "Vai uma mão ai" centraliza essa busca em um único app,
-simples e gratuito tanto para quem procura quanto para quem oferece o
-serviço.
+A proposta inicial previa **Firebase Authentication + Cloud Firestore**. Na Etapa 5,
+essa escolha foi substituída por **Supabase Auth + PostgreSQL**. Trata-se de uma mudança
+da arquitetura planejada: os dados locais demonstrativos não foram migrados de um banco Firebase.
 
-## Tecnologias utilizadas
+O motivo principal foi a adequação do banco relacional às relações entre contas,
+prestadores, categorias e favoritos. No projeto, PostgreSQL permite definir essas
+relações com chaves estrangeiras, impedir favoritos duplicados com uma chave composta
+e remover os favoritos relacionados quando um prestador é excluído. As funções SQL
+também permitem salvar o perfil e seu progresso na mesma transação, enquanto as
+políticas RLS controlam quais registros cada usuário pode consultar e alterar.
 
-- **Mobile:** React Native + Expo
-- **Navegação:** React Navigation (`native-stack` + `bottom-tabs`)
-- **Backend (planejado a partir da Etapa 03):** Firebase (Authentication + Cloud Firestore)
-- **Armazenamento local:** AsyncStorage (sessão demonstrativa, modo Cliente/Prestador, perfil e favoritos por conta)
-- **Contato entre usuários:** integração via deep link do WhatsApp (`wa.me`)
+O Supabase reúne esses recursos com autenticação e API acessíveis pelo aplicativo,
+sem exigir um servidor próprio para esta etapa. A decisão foi pela adequação ao modelo
+de dados e ao uso de SQL; não significa que Firebase seja incapaz de atender ao projeto
+ou que Supabase seja superior em qualquer cenário. A proposta e as etapas anteriores
+permanecem como histórico; esta documentação descreve a implementação atual.
 
-## Estrutura do projeto
+## Executar
 
-```
-vai-uma-mao-ai/
-├── README.md
-├── App.js
-├── app.json
-├── package.json
-├── docs/
-│   ├── proposta.md       # proposta da Etapa 01
-│   ├── etapa-02.md       # documentação da Etapa 02 (interface/navegação)
-│   └── etapa-04.md       # persistência e roteiro de demonstração
-├── src/
-├── components/       # blocos de UI reutilizáveis (Button, Input, Screen, etc.)
-├── screens/          # telas da aplicação
-├── navigation/       # configuração de rotas (stacks + bottom tabs)
-├── data/             # exemplos e repositório de persistência
-├── context/          # dados compartilhados entre as telas
-├── theme/            # cores, espaçamentos e tipografia
-└── utils/            # helpers (ex.: responsividade)
+Pré-requisitos: Node.js 22.13+ na linha 22, 24.3+ na linha 24 ou 26+, npm e Expo Go SDK 58.
+Para Google, use uma development build com o scheme do aplicativo.
 
+1. Crie o projeto Supabase e execute `supabase/migrations/202610250001_etapa05.sql`.
+2. No Supabase Auth, configure Custom SMTP e mantenha **Confirm email** habilitado.
+   Em Emails, use `supabase/templates/confirmation.html` para Confirm signup e
+   `supabase/templates/recovery.html` para Reset password; ambos usam `{{ .Token }}`.
+3. Prepare o ambiente:
+
+```powershell
+npm ci
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-## Instruções para execução
+4. Preencha a URL e a chave **publishable** em `.env`. Nunca use service_role/sb_secret.
+5. Inicie:
 
-Pré-requisitos:
-1. Ter o [Node.js](https://nodejs.org/) instalado.
-2. Instalar o app **Expo Go** no celular (Android/iOS).
-
-Passos:
-```bash
-npm install
-npx expo start
+```powershell
+npx expo start --go --clear
 ```
-Escaneie o QR code exibido no terminal/navegador com o app Expo Go. A
-aplicação também pode ser executada em emulador Android
-(`npx expo start --android`) ou simulador iOS (`npx expo start --ios`).
 
-## Funcionalidades implementadas
+Abra o QR code no Expo Go. Se necessário, acrescente `--tunnel`. Para uma development
+build já instalada, use `npx expo start --dev-client --clear`.
 
-- [x] Camada visual e navegação entre as 5 telas principais (Etapa 02)
-- [x] Busca por cidade/estado/profissão sobre exemplos e perfil cadastrado localmente
-- [x] Tela de detalhes do prestador com contato via WhatsApp
-- [x] Cadastro, edição e exclusão do perfil de prestador com persistência local
-- [x] Favoritar e desfavoritar na busca e nos detalhes, com aba Favoritos
-- [x] Recuperação da sessão, do modo de acesso, do perfil e dos favoritos ao reabrir o aplicativo
-- [x] Sair e trocar de conta mantendo os dados locais de cada e-mail
-- [ ] Login / cadastro de usuário real (autenticação com Firebase)
-- [ ] Sincronização dos dados entre dispositivos (Cloud Firestore)
+## Fluxo principal
 
-*(lista será atualizada a cada etapa, marcando o que já está pronto)*
+Cadastrar nome, e-mail, senha e confirmação de senha → confirmar código recebido → responder se oferece
+serviços → preencher cadastro → publicar → encontrar na busca → consultar detalhes →
+editar → excluir com confirmação. Escolher Não abre a busca; Perfil permite divulgar
+serviços depois. Um rascunho pode ser salvo incompleto e retomado, sem exposição pública.
 
-## Limitações conhecidas
+Nome de divulgação, categoria, descrição, cidade/UF, WhatsApp e formas de atendimento
+são obrigatórios para publicar. Regiões atendidas são opcionais. O nome da conta é
+privado e independente do nome profissional. Todos podem buscar e favoritar profissionais.
 
-- Os dados persistidos pertencem ao dispositivo: um perfil de prestador e uma
-  lista de favoritos. Os exemplos do catálogo são somente para demonstração.
-- Não há autenticação real nem regras de acesso a dados nesta fase.
-- Filtro por cidade/estado com preenchimento opcional pela localização do
-  dispositivo; ainda sem mapa ou busca por distância.
-- O login continua demonstrativo: não há verificação real de senha. O e-mail
-  identifica a conta local. Sair encerra a sessão sem apagar perfil/favoritos.
-  Cada e-mail tem seus próprios dados, e senhas não são armazenadas.
-- Desinstalar o aplicativo/Expo Go ou limpar seus dados remove o armazenamento local.
+## Funcionalidades
 
-## Decisões técnicas
+- Cadastro e login reais com e-mail/senha, verificação por código, reenvio e recuperação.
+- Confirmação de senha obrigatória e idêntica antes do envio do cadastro.
+- Tratamento de cadastro repetido, inclusive resposta com identidades vazias do Auth,
+  orientando a entrar ou recuperar a senha sem apresentar uma nova conta como criada.
+- Google por Supabase OAuth/PKCE, condicionado à configuração e à development build.
+- Primeiro acesso persistido no banco e perfil profissional opcional.
+- CRUD de prestador, rascunhos privados e perfis publicados consultáveis por autenticados.
+- Busca remota paginada, sem distinção de acentos no nome/cidade, filtros e atualização.
+- Favoritos privados por usuário, sem duplicatas, com exclusão em cascata.
+- Detalhes atualizados e contato por WhatsApp externo.
+- Sugestões de categoria e localização opcional; preenchimento manual continua disponível.
+- Sessão restaurada pelo Supabase Auth; filtros salvos em JSON no AsyncStorage por projeto/UUID.
+- Validações no aplicativo e banco, estados de espera, mensagens de erro e repetição manual.
 
-As decisões de persistência e o roteiro para testar fechamento/reabertura estão
-em [`docs/etapa-04.md`](docs/etapa-04.md). As decisões iniciais de interface estão
-em [`docs/etapa-02.md`](docs/etapa-02.md).
+## Arquitetura
 
-Execute `npm test` para validar criação, edição, exclusão, favoritos, concorrência
-e falhas de armazenamento. Os testes usam um adaptador em memória; o roteiro no
-Expo Go verifica o armazenamento nativo no dispositivo.
+Telas/React Navigation → DataContext → serviços de autenticação e repositório → Supabase.
+O SDK envia HTTPS/JSON com chave pública e token de acesso. As políticas RLS aplicam
+as permissões no banco. As funções SQL de cadastro executam múltiplas alterações em
+uma transação, sem desabilitar RLS.
 
-## Busca por profissão e localização
+- `src/services`: cliente Supabase, autenticação, OAuth, timeout e mensagens de erro.
+- `src/data/supabaseRepository.js`: consultas, publicação, edição, exclusão e favoritos.
+- `src/data/preferences.js`: filtros locais por conta.
+- `supabase/migrations`: tabelas, índices, constraints, triggers, funções e políticas RLS.
+- `supabase/templates`: templates dos e-mails de confirmação e recuperação.
+- `tests`: regressões locais, contratos HTTP e PostgreSQL/RLS com PGlite.
 
-A busca oferece sugestões ao digitar parte de uma profissão. Toque em uma
-sugestão para aplicar o filtro; use **Limpar profissão** para removê-lo.
-A comparação ignora acentos e maiúsculas, e prioriza nomes que começam pelo
-texto digitado. As sugestões usam o catálogo local de categorias.
+Tecnologias: Expo SDK 58, React Native 0.88, React 19.3, React Navigation, Supabase JS,
+AsyncStorage, expo-location, expo-web-browser e expo-linking.
 
-O botão **Usar minha localização** solicita permissão de localização durante
-uso, obtém a posição e consulta cidade e estado com `expo-location`.
-A aplicação converte o nome do estado brasileiro para UF e mantém os campos
-editáveis. Aceita nomes de estado em português/inglês, siglas e códigos como
-`BR-SP`; quando `city` está vazio, considera `subregion` como alternativa de
-município, descartando divisões explicitamente regionais. Confira o resultado,
-pois os campos administrativos variam conforme o serviço do dispositivo.
-Resultados parciais preenchem somente o campo identificado e pedem para conferir
-o outro. As mensagens distinguem falha ao obter posição de falha ao consultar endereço.
-Negar a permissão, desligar o GPS ou uma falha na consulta não
-impede a busca manual. A consulta tem limite de espera de 20 segundos após
-a verificação da permissão e dos serviços. Não há acompanhamento em segundo plano.
-O preenchimento automático é destinado ao Android/iOS; na web, os campos são manuais.
+## Verificação
 
-### Bibliotecas e acessibilidade
+```powershell
+npm test
+npx expo-doctor
+npx expo export --platform android --platform ios --output-dir dist
+```
 
-- React e componentes do React Native: estado do campo, sugestões e seleção,
-  sem biblioteca adicional de autocomplete.
-- `expo-location`: `requestForegroundPermissionsAsync`,
-  `getCurrentPositionAsync` e `reverseGeocodeAsync`.
-- `@expo/vector-icons`, já presente: ícones de busca e localização.
-- Recursos nativos de acessibilidade: rótulos, dicas, identificação dos botões,
-  anúncio do resultado da localização e alvos de toque com altura mínima de 48.
-- Filtros e resultados compartilham a rolagem vertical para permitir acesso aos
-  campos e sugestões em telas pequenas e com tamanho de fonte aumentado.
+Os testes do banco usam PostgreSQL embutido (PGlite) com um schema Auth mínimo simulado;
+as tabelas, funções e políticas do aplicativo são executadas de verdade. Os testes HTTP
+usam o SDK oficial com respostas controladas. Eles não validam entrega de e-mail,
+consentimento Google, configuração do projeto remoto ou execução no aparelho.
 
-### Teste no Expo Go
+A última execução de `npm test` aprovou **31 testes**. A configuração base também passou
+em 20/20 verificações do Expo Doctor e na exportação Android/iOS. As verificações locais
+não substituem o roteiro manual da Etapa 5. O visual verde original foi mantido.
 
-1. Execute `npm install` e `npx expo start`, depois abra o projeto no Expo Go.
-2. Digite `ele` no campo Profissão e selecione Eletricista; confira os resultados.
-3. Limpe a profissão e digite `moveis`; confira a sugestão Montador(a) de móveis.
-4. Digite um termo inexistente e confira a mensagem sem sugestões.
-5. Toque em Usar minha localização, permita o acesso e confira cidade/UF.
-6. Edite ou limpe cidade/UF manualmente e confira a atualização da busca.
-7. Verifique também permissão negada, GPS desativado e conexão indisponível.
-8. Com TalkBack/VoiceOver e fonte ampliada, navegue pelos campos e sugestões.
+## Publicação do código
 
-Os prestadores de exemplo são de Goiás, somados ao seu cadastro local. Uma localização real
-fora das cidades cadastradas pode mostrar zero resultados; limpe cidade/UF
-para consultar todos. A mensagem personalizada de permissão em `app.json`
-é aplicada a builds próprios; o Expo Go utiliza suas permissões nativas.
+Versione o código, os testes, `README.md`, `docs/etapa-05.md`,
+a migração SQL e os templates. `.env`, `node_modules` e `dist` são ignorados pelo Git.
+Cada pessoa que clonar o repositório precisa configurar seu próprio `.env`; nunca
+inclua senha SMTP, senha do banco ou chaves administrativas na entrega.
 
-## Sessão persistente e troca de conta
+A tag local `etapa-05` foi criada na implementação inicial. Alterações posteriores,
+como confirmação de senha e esta atualização da documentação, precisam de um novo
+commit e não passam a integrar essa tag automaticamente. Confira o commit da tag
+antes de usá-la como referência da entrega final.
 
-Depois de entrar, o aplicativo restaura a sessão e o tipo Cliente/Prestador ao
-reabrir. Em Perfil aparecem o e-mail e o tipo de acesso. Para trocar de conta,
-use **Perfil → Sair** e entre com outro e-mail. Ao voltar ao e-mail anterior,
-seu perfil e seus favoritos serão recuperados. O tipo de acesso não restringe
-funcionalidades nesta demonstração.
+## Dados anteriores e limites
 
-Os dados antigos, ainda sem conta, são vinculados uma única vez ao primeiro
-e-mail que entrar após a atualização. A senha serve apenas à validação da tela
-demonstrativa e não é passada ao armazenamento. Não use isso como autenticação
-de produção.
+O armazenamento demonstrativo da Etapa 4 foi preservado, mas não é usado como sessão
+real nem importado automaticamente. E-mails iguais não comprovam propriedade de dados.
+Os profissionais fictícios não fazem parte do catálogo remoto.
 
-## Categoria e localização no cadastro do prestador
+Não há fila de gravação offline nem sincronização em tempo real. O app atualiza dados
+ao abrir telas, após operações e ao puxar para atualizar. AsyncStorage não oferece
+criptografia própria: é usado pelo SDK para sessão e pelo app para filtros; senhas
+não são armazenadas. Limpar os dados do aplicativo remove sessão/preferências locais,
+mas não os dados remotos. A confirmação de e-mail não certifica qualificação profissional.
 
-Em **Perfil → Meu perfil de prestador**, a categoria é escolhida digitando parte
-da profissão e tocando em uma sugestão. O campo começa vazio em cadastros novos;
-na edição, mostra a categoria salva. Limpar ou alterar o texto exige selecionar
-uma sugestão novamente antes de salvar.
-
-O botão **Usar minha localização** preenche cidade/UF com o mesmo tratamento da
-busca, incluindo permissão, falhas e resultados parciais. Os campos podem ser
-corrigidos manualmente. A localização só integra o cadastro persistente ao salvar.
-
-`CategoryAutocomplete` e `LocationFields` são componentes React Native reutilizados
-nas duas telas. O hook `useDeviceLocation` centraliza o uso de `expo-location`.
-Nenhuma biblioteca adicional foi necessária.
-
-Para conferir no Expo Go: abra um cadastro novo, digite `ele`, selecione Eletricista,
-teste o botão de localização, complete os demais campos e salve. Reabra o formulário
-para conferir os valores persistidos. Teste também limpar a categoria e tentar salvar,
-negar a permissão de localização e preencher cidade/UF manualmente.
+Repositório: [doSantus/vai-uma-mao-ai](https://github.com/doSantus/vai-uma-mao-ai).
