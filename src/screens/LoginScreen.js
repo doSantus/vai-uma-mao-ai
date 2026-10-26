@@ -14,6 +14,7 @@ export default function LoginScreen() {
   const [name,setName] = useState('');
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
+  const [confirmPassword,setConfirmPassword] = useState('');
   const [code,setCode] = useState('');
   const [verification,setVerification] = useState(null);
   const [errors,setErrors] = useState({});
@@ -32,7 +33,7 @@ export default function LoginScreen() {
     pending.current=true; setBusy(true); setErrors({});
     try { await action(); }
     catch(error) {
-      if(error.code==='email_not_confirmed') { setVerification('signup'); setPassword(''); }
+      if(error.code==='email_not_confirmed') { setVerification('signup'); setPassword(''); setConfirmPassword(''); }
       setErrors({ general:errorMessage(error) });
     } finally { pending.current=false; setBusy(false); }
   }
@@ -42,11 +43,13 @@ export default function LoginScreen() {
     if(mode==='register' && (name.trim().split(/\s+/).length<2 || name.trim().length>100)) next.name='Informe nome e sobrenome (até 100 caracteres)';
     if(mode!=='recover' && !password) next.password='Informe sua senha';
     if(mode==='register' && password.length<8) next.password='Use pelo menos 8 caracteres';
+    if(mode==='register' && !confirmPassword) next.confirmPassword='Digite sua senha novamente';
+    else if(mode==='register' && confirmPassword!==password) next.confirmPassword='As senhas precisam ser iguais';
     if(Object.keys(next).length) { setErrors(next); return; }
     run(async () => {
       if(mode==='login') await signIn({email,password});
       else if(mode==='register') {
-        await signUp({email,password,name}); setPassword(''); setCode(''); setVerification('signup'); cooldown();
+        await signUp({email,password,name}); setPassword(''); setConfirmPassword(''); setCode(''); setVerification('signup'); cooldown();
       } else {
         await recoverPassword(email); setVerification('recovery'); setCode(''); cooldown();
       }
@@ -64,7 +67,7 @@ export default function LoginScreen() {
       Alert.alert('Solicitação recebida','Se o endereço estiver apto, você receberá um novo código. Confira também a caixa de spam.');
     });
   }
-  const changeMode=(value)=>{setMode(value);setErrors({});setPassword('');};
+  const changeMode=(value)=>{setMode(value);setErrors({});setPassword('');setConfirmPassword('');};
   return <Screen scroll>
     <View style={styles.header}>
       <Ionicons name={verification ? 'mail-outline' : 'hand-left'} size={48} color={colors.primary}/>
@@ -72,7 +75,7 @@ export default function LoginScreen() {
       <Text style={styles.subtitle}>{verification ? email.trim() : 'Encontre ou divulgue serviços na sua cidade'}</Text>
     </View>
     {verification ? <>
-      <Text style={styles.subtitle}>Digite o código recebido por e-mail. Se ele expirou, solicite outro. Confira a caixa de spam.</Text>
+      <Text style={styles.subtitle}>Se o endereço estiver apto, você receberá um código por e-mail. Digite o código abaixo e confira também a caixa de spam. Se já confirmou sua conta, volte para Entrar ou recupere sua senha.</Text>
       <Input label="Código de confirmação" keyboardType="number-pad" autoComplete="one-time-code" value={code} onChangeText={setCode} maxLength={12} editable={!busy} error={errors.code}/>
       {!!errors.general && <Text accessibilityRole="alert" style={styles.error}>{errors.general}</Text>}
       <Button title="Confirmar código" loading={busy} onPress={confirm}/>
@@ -85,7 +88,8 @@ export default function LoginScreen() {
       </View>}
       {mode==='register' && <Input label="Nome completo" value={name} onChangeText={setName} autoCapitalize="words" maxLength={100} editable={!busy} error={errors.name}/>}
       <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} editable={!busy} error={errors.email}/>
-      {mode!=='recover' && <Input label="Senha" value={password} onChangeText={setPassword} secureTextEntry editable={!busy} error={errors.password}/>}
+      {mode!=='recover' && <Input label="Senha" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!busy} error={errors.password}/>}
+      {mode==='register' && <Input label="Confirmar senha" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!busy} error={errors.confirmPassword}/>}
       {!!errors.general && <Text accessibilityRole="alert" style={styles.error}>{errors.general}</Text>}
       <Button title={mode==='login'?'Entrar':mode==='register'?'Criar conta':'Enviar código de recuperação'} loading={busy} onPress={submit}/>
       {mode==='login' && <Button title="Esqueci minha senha" variant="ghost" disabled={busy} onPress={()=>changeMode('recover')}/>}

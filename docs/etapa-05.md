@@ -8,14 +8,51 @@ HTTPS do Supabase/PostgreSQL. O fluxo de negócio principal é criar, consultar,
 e excluir um perfil profissional; autenticação e favoritos complementam a operação.
 
 O código da integração, a migração SQL, os templates de e-mail e os testes locais
-estão preparados. **A ativação em um projeto Supabase real está pendente**: o projeto
-na nuvem ainda não foi criado pelo responsável. Envio real de e-mail, Google e fluxo
-completo em dois dispositivos ainda precisam ser verificados após a configuração.
-Esta distinção evita apresentar testes simulados como demonstração de backend remoto.
+estão preparados. A situação abaixo registra o avanço até **25/10/2026**, distinguindo
+verificação técnica, relato do responsável e validações ainda pendentes.
+
+| Item | Situação e evidência |
+| --- | --- |
+| Projeto e conexão | Projeto criado; consulta real de configuração Auth retornou HTTP 200 |
+| Migração SQL | Responsável executou e recebeu `Success. No rows returned` |
+| Tabelas remotas | API reconheceu profiles, providers, categories e favorites; consultas anônimas negadas com 42501 |
+| Confirmação de e-mail | Configuração real consultada com confirmação habilitada |
+| SMTP | Responsável informou que configurou Gmail com senha de app no painel; segredo não incluído no projeto |
+| Cadastro no aplicativo | Responsável relatou testes, incluindo repetição do mesmo e-mail; não há registro de auditoria que comprove contas duplicadas |
+| Recuperação, CRUD e favoritos com duas contas | Implementados e cobertos parcialmente por testes locais; roteiro remoto completo ainda precisa ser registrado |
+| Google | Implementado, mas provedor/configuração e development build ainda pendentes; botão desabilitado |
+
+O visual verde anterior foi mantido. Os ajustes mais recentes no cadastro incluem
+confirmação de senha e tratamento da resposta de cadastro repetido do Supabase Auth.
+
+## Correspondência com o enunciado
+
+O enunciado ETAPA 05.docx solicita a documentação em **docs/etapa-05.md**, não um
+arquivo Word de resposta. Este é o arquivo de entrega correspondente. O backend é
+de livre escolha, portanto a adoção do Supabase atende a essa condição.
+
+| Requisito do enunciado | Onde está atendido ou descrito |
+| --- | --- |
+| Integração mobile/backend e divisão de responsabilidades | Arquitetura e responsabilidades; comunicação HTTP |
+| Pelo menos um fluxo completo de negócio | Criar, consultar, editar e excluir um perfil; fluxo completo e roteiro de demonstração |
+| Interface e navegação | Telas de autenticação, primeiro acesso, busca, detalhes, favoritos e perfil via React Navigation |
+| Persistência local quando aplicável | Sessão e filtros no AsyncStorage; seção de persistência local |
+| Entradas inválidas e feedback | Seção dedicada com validações, erros, espera e confirmações |
+| Funcionalidades e decisões técnicas | Funcionalidades integradas, banco, arquitetura e troca de backend |
+| Instruções de execução e teste | Seções de execução, roteiro manual e testes automatizados |
+| README atualizado | README na raiz do repositório |
+| Mesmo repositório, tag etapa-05 e link | Seção Repositório e entrega; conferir commit da tag antes da publicação final |
+
+A cobertura documental não substitui a demonstração do fluxo com o backend remoto.
+As pendências de validação estão registradas na situação da entrega. Capturas e vídeos
+são evidências complementares opcionais no enunciado. Login com Google é uma extensão
+do projeto, não uma exigência específica da atividade.
 
 ## Fluxo completo implementado
 
-1. A pessoa informa nome completo, e-mail e senha na tela Cadastrar.
+1. A pessoa informa nome completo, e-mail, senha e confirmação de senha na tela Cadastrar.
+   As senhas devem ser idênticas; o aplicativo bloqueia o envio se forem diferentes ou
+   se a confirmação estiver vazia. A confirmação não é enviada ao backend.
 2. O Supabase Auth recebe a solicitação. Com Confirm email habilitado e SMTP configurado,
    envia o código pelo template de confirmação. A senha é entregue ao serviço por HTTPS.
 3. A pessoa digita o código. O aplicativo chama verifyOtp; somente uma resposta válida
@@ -41,7 +78,7 @@ na busca. Voltar do formulário sem salvar descarta somente alterações não en
 
 | Funcionalidade | Comportamento nesta etapa |
 | --- | --- |
-| E-mail e senha | Supabase Auth, sessão persistente e logout local ao aparelho |
+| E-mail e senha | Supabase Auth, confirmação de senha no cadastro, sessão persistente e logout local ao aparelho |
 | Confirmação | Código real validado no servidor, template, expiração e reenvio |
 | Recuperação de senha | Solicitar e-mail, validar código do tipo recovery e definir nova senha |
 | Google | OAuth/PKCE, navegador do sistema, callback do app; exige configuração e development build |
@@ -56,6 +93,27 @@ na busca. Voltar do formulário sem salvar descarta somente alterações não en
 Não são usadas as contas demonstrativas nem os profissionais fictícios na execução
 atual. Os arquivos do repositório local antigo permanecem como histórico/testes e os
 dados antigos não são apagados nem importados automaticamente por coincidência de e-mail.
+
+## Decisão técnica: Firebase substituído por Supabase
+
+A proposta inicial escolhia Firebase Authentication e Cloud Firestore. Na Etapa 5,
+o backend adotado passou a ser Supabase Auth e PostgreSQL. A troca ocorreu na escolha
+da implementação; não houve migração de uma base de produção do Firebase. A etapa
+anterior usava persistência local demonstrativa, preservada como histórico.
+
+O modelo contém relações explícitas entre conta, perfil profissional, categoria e
+favoritos. PostgreSQL permite expressá-las por chaves estrangeiras e restrições:
+um prestador por conta, uma categoria válida por perfil e um favorito por par
+usuário/prestador. A exclusão em cascata evita favoritos apontando para perfis removidos.
+Funções SQL executam alterações relacionadas em uma transação, e RLS aplica as
+permissões de cada usuário junto ao banco.
+
+Supabase oferece autenticação e APIs junto desse banco relacional, atendendo ao escopo
+sem um servidor próprio. A familiaridade com a representação SQL e a possibilidade de
+versionar o esquema na migração também orientaram a decisão. Firebase poderia atender
+ao aplicativo com outra modelagem; a escolha não se baseia em uma superioridade geral
+de um serviço sobre o outro. As referências a Firebase nas etapas anteriores registram
+o planejamento original; README e esta etapa documentam a arquitetura vigente.
 
 ## Arquitetura e responsabilidades
 
@@ -159,7 +217,14 @@ compartilhados, como prestadores e favoritos, pertencem ao PostgreSQL remoto.
 
 ## Entradas inválidas e feedback
 
-- Cadastro exige nome/sobrenome, e-mail válido e senha de pelo menos 8 caracteres.
+- Cadastro exige nome/sobrenome, e-mail válido, senha de pelo menos 8 caracteres e
+  confirmação exatamente igual, sem remover espaços ou alterar a senha digitada.
+- E-mail é normalizado com remoção de espaços externos e conversão para minúsculas.
+- O Supabase pode ocultar a existência de uma conta no retorno de signUp. Quando retorna
+  identidades vazias, o app não avança como se fosse um novo cadastro e orienta a entrar
+  ou recuperar a senha. Erros explícitos de duplicidade também recebem mensagem própria.
+  Repetir uma solicitação de cadastro não comprova duas contas criadas; a conferência é
+  feita em Authentication → Users. Cadastro ainda não confirmado pode continuar pendente.
 - A confirmação exige código numérico e validação real pelo Supabase. Não há código fixo.
 - A recuperação valida o código como recovery e exige repetir a nova senha.
 - Publicação exige categoria válida, nome, descrição de 10 a 1.000 caracteres,
@@ -173,12 +238,24 @@ compartilhados, como prestadores e favoritos, pertencem ao PostgreSQL remoto.
 
 ## Execução e configuração
 
-Siga `docs/supabase-setup.md` para criar o projeto, executar SQL, configurar Auth/SMTP,
-preencher `.env`, habilitar Google e preparar a development build.
+Em uma nova instalação:
+
+1. Crie um projeto Supabase e execute uma vez a migração
+   `supabase/migrations/202610250001_etapa05.sql` no SQL Editor. Não repita no projeto
+   atual, onde ela já foi aplicada.
+2. Em Authentication, mantenha o provedor Email e Confirm email habilitados e a senha
+   mínima de 8 caracteres. Configure Custom SMTP antes de editar os templates.
+3. Use `supabase/templates/confirmation.html` em Confirm signup e
+   `supabase/templates/recovery.html` em Reset password. O campo `{{ .Token }}` envia
+   o código digitado no aplicativo. Credenciais SMTP ficam somente no painel.
+4. Crie `.env` a partir do exemplo e preencha `EXPO_PUBLIC_SUPABASE_URL` e
+   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` com os dados públicos do projeto. Mantenha
+   `EXPO_PUBLIC_GOOGLE_AUTH_ENABLED=false` enquanto Google não estiver configurado.
+5. Instale as dependências, inicie o Expo e siga o roteiro de teste abaixo.
 
 ```powershell
 npm ci
-Copy-Item .env.example .env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 # Preencher .env com URL HTTPS e chave publishable
 npx expo start --go --clear
 ```
@@ -186,6 +263,13 @@ npx expo start --go --clear
 Senha, OTP e CRUD podem ser testados no Expo Go SDK 58. Google usa uma development
 build com scheme vaiumamaoai e callback vaiumamaoai://auth/callback. Templates de
 confirmação e recuperação ficam em `supabase/templates`. Não há credenciais no Git.
+
+Para habilitar Google posteriormente, configure um cliente OAuth Web no Google Cloud
+com o callback informado pelo Supabase (`https://SEU-PROJETO.supabase.co/auth/v1/callback`).
+Cadastre Client ID e Client Secret somente no provedor Google do painel Supabase,
+autorize `vaiumamaoai://auth/callback` em Redirect URLs, habilite a variável Google
+e gere uma development build. O segredo Google nunca pertence ao aplicativo.
+Essa configuração é adicional ao fluxo obrigatório de e-mail/senha.
 
 ## Roteiro de teste e demonstração
 
@@ -205,9 +289,15 @@ confirmação e recuperação ficam em `supabase/templates`. Não há credenciai
 14. Na development build, testar Google, cancelamento e retorno por deep link.
 15. Desligar a conexão ao consultar/salvar: conferir mensagem e ausência de sucesso falso.
 16. Negar localização, preencher manualmente e testar abertura do WhatsApp.
+17. Deixar Confirmar senha vazio e depois informar uma senha diferente: o app deve
+    mostrar o erro no campo e não enviar a solicitação. Repetir com senhas iguais.
+18. Tentar cadastrar novamente um e-mail já confirmado: verificar o feedback e conferir
+    Authentication → Users. A senha da conta existente não deve ser substituída por
+    uma tentativa de novo cadastro; usar recuperação para alterá-la.
 
 Screenshots ou vídeo devem mostrar registros reais e o mesmo ID antes/depois da edição.
-Não há captura de execução em aparelho ou entrega real de e-mail nesta validação local.
+Há relato de cadastro no aparelho, mas ainda não foram anexadas capturas ou vídeo que
+documentem todo o roteiro. A entrega real de e-mail deve ser demonstrada no teste manual.
 
 ## Testes automatizados e resultados
 
@@ -222,10 +312,13 @@ npx expo export --platform android --platform ios --output-dir dist
   duas contas, rascunho privado, favoritos únicos e exclusão em cascata.
 - SDK Supabase com HTTP controlado verificando métodos, corpo JSON, headers e erros.
 - Autenticação verificando payloads de senha/OTP/recovery e propagação de erro do servidor.
+- Regressão para resposta com identidades vazias e erro explícito de cadastro existente,
+  preservando o caminho válido de criação de uma conta nova.
 - Timeout/cancelamento de fetch e persistência/isolamento dos filtros locais.
 
-A execução local registrou 30 testes aprovados, 20/20 verificações do Expo Doctor e
-bundles Android/iOS gerados. O PGlite simula apenas o schema Auth para os testes SQL;
+A execução local mais recente registrou **31 testes aprovados**. A configuração base
+passou em 20/20 verificações do Expo Doctor e gerou bundles Android/iOS. A tela de login
+com confirmação de senha também foi compilada pelo Babel. O PGlite simula apenas o schema Auth para os testes SQL;
 não executa GoTrue, PostgREST, SMTP ou Google. Os testes HTTP usam respostas controladas.
 No ambiente Windows utilizado, TEMP/TMP foram apontados para `dist/.expo-temp` para
 permitir geração do bytecode Hermes; o resultado foi salvo em `dist/etapa05`.
@@ -235,10 +328,14 @@ permitir geração do bytecode Hermes; o resultado foi salvo em `dist/etapa05`.
 Repositório: https://github.com/doSantus/vai-uma-mao-ai
 
 A entrega inclui este documento, README, código mobile, SQL, templates e testes no
-mesmo repositório. A tag etapa-05 identifica o código preparado para a etapa; a tag
-não comprova que serviços externos foram configurados ou que o roteiro remoto passou.
-Antes da apresentação final, concluir a ativação e registrar os resultados reais do
-roteiro com duas contas, incluindo código de e-mail e Google.
+mesmo repositório. A tag local etapa-05 identifica o snapshot inicial da implementação;
+as alterações posteriores precisam ser commitadas e não atualizam essa tag automaticamente.
+Antes de publicar a entrega final, conferir o commit referenciado pela tag e o conteúdo
+da branch. Não incluir `.env`, credenciais SMTP, senha do banco ou chaves administrativas.
+O envio ao GitHub não foi realizado pelo assistente nesta atualização.
+
+Antes da apresentação final, concluir a configuração Google e registrar os resultados
+reais do roteiro com duas contas, incluindo código de e-mail e recuperação de senha.
 
 ## Referências utilizadas
 

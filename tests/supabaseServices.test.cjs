@@ -71,6 +71,15 @@ test('autenticação usa senha real, código do servidor e tipos distintos de co
   await assert.rejects(rejecting.verifyEmail('joao@example.com','123456'),e=>e.code==='otp_expired');
 });
 
+test('cadastro não trata usuário ofuscado como conta nova e preserva erros de duplicidade',async()=>{
+  const credentials={email:'pessoa@example.com',password:'senha-forte',name:'Pessoa Teste'};
+  const serviceFor=(data,error=null)=>createAuthService({auth:{signUp:async()=>({data,error})}});
+  await assert.rejects(serviceFor({session:null,user:{identities:[]}}).signUp(credentials),e=>/entre ou use/.test(errorMessage(e)));
+  const created={session:null,user:{id:'new-user',identities:[{provider:'email'}]}};
+  assert.deepEqual(await serviceFor(created).signUp(credentials),created);
+  await assert.rejects(serviceFor(null,{code:'user_already_exists'}).signUp(credentials),e=>/Já existe uma conta/.test(errorMessage(e)));
+});
+
 test('timeout e cancelamento não deixam chamadas penduradas',async()=>{
   const fetcher=(_url,{signal})=>new Promise((_,reject)=>{
     const abort=()=>reject(Object.assign(new Error('timeout'),{name:'AbortError'}));
