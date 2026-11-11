@@ -4,12 +4,22 @@ Aplicativo mobile para encontrar prestadores por profissão, cidade e estado, sa
 favoritos e entrar em contato pelo WhatsApp. Toda pessoa cria uma conta única e pode
 optar por divulgar serviços depois do cadastro.
 
-## Etapa 5 e situação da entrega
+## Etapas 5 e 6 e situação da entrega
 
 A integração com **Supabase Auth + PostgreSQL** está implementada no código, incluindo
 migração SQL, regras de acesso, autenticação por senha, confirmação por código,
 recuperação de senha e Google por OAuth/PKCE. Os testes locais incluem execução das
 regras de banco e chamadas HTTP com respostas controladas.
+
+A **Etapa 6** documenta essa integração externa já implementada: consultas, envios
+e atualizações por HTTPS/JSON, com tratamento de carregamento, sucesso, erro e
+ausência de dados. Não exige um segundo serviço para cumprir o escopo do enunciado.
+A documentação específica inclui endpoints, métodos HTTP, exemplos de dados,
+configuração e roteiro para testar a integração.
+
+**Verificação em 11/11/2026:** os 31 testes locais passaram. O roteiro no aparelho
+com o serviço remoto não foi executado nesta atualização. A tag `etapa-06` deverá
+ser criada no commit da entrega e enviada ao GitHub junto com a branch `main`.
 
 **Situação em 25/10/2026:** o projeto Supabase foi criado, o ambiente local foi conectado
 e a migração foi executada com sucesso. A API reconhece as quatro tabelas e nega acesso
@@ -19,6 +29,7 @@ completo com duas contas, recuperação de senha e Google; o Google continua des
 Sem URL e chave pública válidas, o aplicativo mostra a tela de configuração; não simula login.
 
 - [Documentação completa da Etapa 5](docs/etapa-05.md)
+- [Integração externa da Etapa 6](docs/etapa-06.md)
 - [Proposta original](docs/proposta.md)
 - [Etapa 2](docs/etapa-02.md) e [Etapa 4](docs/etapa-04.md), referentes às versões anteriores
 
@@ -130,7 +141,7 @@ não substituem o roteiro manual da Etapa 5. O visual verde original foi mantido
 
 ## Publicação do código
 
-Versione o código, os testes, `README.md`, `docs/etapa-05.md`,
+Versione o código, os testes, `README.md`, `docs/etapa-05.md`, `docs/etapa-06.md`,
 a migração SQL e os templates. `.env`, `node_modules` e `dist` são ignorados pelo Git.
 Cada pessoa que clonar o repositório precisa configurar seu próprio `.env`; nunca
 inclua senha SMTP, senha do banco ou chaves administrativas na entrega.
