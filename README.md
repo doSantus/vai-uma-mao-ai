@@ -4,7 +4,27 @@ Aplicativo mobile para encontrar prestadores por profissão, cidade e estado, sa
 favoritos e entrar em contato pelo WhatsApp. Toda pessoa cria uma conta única e pode
 optar por divulgar serviços depois do cadastro.
 
-## Etapas 5 e 6 e situação da entrega
+## Etapa 7 — Estado global e localização nativa
+
+O aplicativo compartilha sessão, perfil, categorias e favoritos entre as telas com
+React Context (`DataProvider` e `useData`). Favoritar na busca atualiza o estado
+consumido por Detalhes e Favoritos; os dados são persistidos no Supabase.
+
+O botão **Usar minha localização**, na busca e no cadastro, integra `expo-location`
+para obter a posição real e preencher cidade/UF. Solicita permissão somente durante
+o uso, trata negativa, bloqueio, GPS desligado e falhas, e mantém preenchimento manual.
+Consultas têm prazo de 20 segundos após a decisão de permissão. Endereços parciais
+não são combinados com campos antigos, e resultados tardios são descartados.
+
+A [documentação da Etapa 7](docs/etapa-07.md) identifica os estados globais, justifica
+as escolhas, explica permissões e privacidade e traz roteiro de execução, testes e
+comandos para criar/publicar a tag `etapa-07` no commit final.
+
+**Verificação em 17/11/2026:** os 38 testes locais passaram. A validação de GPS,
+permissões e sincronização entre telas no aparelho ainda precisa ser executada
+conforme o roteiro manual. Commit, tag e push serão feitos pelos comandos de entrega.
+
+## Etapas 5 e 6 e histórico da entrega
 
 A integração com **Supabase Auth + PostgreSQL** está implementada no código, incluindo
 migração SQL, regras de acesso, autenticação por senha, confirmação por código,
@@ -30,6 +50,7 @@ Sem URL e chave pública válidas, o aplicativo mostra a tela de configuração;
 
 - [Documentação completa da Etapa 5](docs/etapa-05.md)
 - [Integração externa da Etapa 6](docs/etapa-06.md)
+- [Estado global e recurso nativo da Etapa 7](docs/etapa-07.md)
 - [Proposta original](docs/proposta.md)
 - [Etapa 2](docs/etapa-02.md) e [Etapa 4](docs/etapa-04.md), referentes às versões anteriores
 
@@ -115,6 +136,9 @@ uma transação, sem desabilitar RLS.
 - `src/services`: cliente Supabase, autenticação, OAuth, timeout e mensagens de erro.
 - `src/data/supabaseRepository.js`: consultas, publicação, edição, exclusão e favoritos.
 - `src/data/preferences.js`: filtros locais por conta.
+- `src/context/DataContext.js`: estado compartilhado e coordenação das operações.
+- `src/hooks/useDeviceLocation.js`: localização nativa e tratamento de indisponibilidade.
+- `src/utils/location.js`: normalização de município/UF retornados pelo dispositivo.
 - `supabase/migrations`: tabelas, índices, constraints, triggers, funções e políticas RLS.
 - `supabase/templates`: templates dos e-mails de confirmação e recuperação.
 - `tests`: regressões locais, contratos HTTP e PostgreSQL/RLS com PGlite.
@@ -135,13 +159,20 @@ as tabelas, funções e políticas do aplicativo são executadas de verdade. Os 
 usam o SDK oficial com respostas controladas. Eles não validam entrega de e-mail,
 consentimento Google, configuração do projeto remoto ou execução no aparelho.
 
-A última execução de `npm test` aprovou **31 testes**. A configuração base também passou
-em 20/20 verificações do Expo Doctor e na exportação Android/iOS. As verificações locais
-não substituem o roteiro manual da Etapa 5. O visual verde original foi mantido.
+A execução de `npm test` em 17/11/2026 aprovou **38 testes**. As dependências foram
+alinhadas às versões recomendadas do SDK 58 e o Expo Doctor passou em **20/20**
+verificações. A exportação Android/iOS foi validada. As verificações locais
+não substituem os roteiros manuais das Etapas 5 e 7. Os testes do hook de localização
+usam APIs nativas e relógio controlados e não validam o GPS ou o diálogo do sistema.
+O visual verde original foi mantido.
+
+O npm reportou 37 alertas de vulnerabilidade na árvore de dependências durante a
+instalação (2 moderados, 34 altos e 1 crítico). Isso requer uma análise específica
+de dependências; a aprovação dos testes e do Expo Doctor não é uma auditoria de segurança.
 
 ## Publicação do código
 
-Versione o código, os testes, `README.md`, `docs/etapa-05.md`, `docs/etapa-06.md`,
+Versione o código, os testes, `README.md`, `docs/etapa-05.md`, `docs/etapa-06.md`, `docs/etapa-07.md`,
 a migração SQL e os templates. `.env`, `node_modules` e `dist` são ignorados pelo Git.
 Cada pessoa que clonar o repositório precisa configurar seu próprio `.env`; nunca
 inclua senha SMTP, senha do banco ou chaves administrativas na entrega.

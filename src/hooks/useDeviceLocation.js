@@ -15,11 +15,12 @@ export default function useDeviceLocation(setCity, setState) {
   }, []);
 
   async function useCurrentLocation() {
-    if (locationPending.current) return;
+    if (locationPending.current || !mounted.current) return;
     locationPending.current = true;
     setLocating(true);
     setLocationMessage('');
     let timeout;
+    let expired = false;
     let stage = 'position';
     const report = (message) => {
       if (!mounted.current) return;
@@ -32,24 +33,29 @@ export default function useDeviceLocation(setCity, setState) {
         return;
       }
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (!mounted.current) return;
       if (!permission.granted) {
         report(permission.canAskAgain
           ? 'Permissão de localização negada. Você pode preencher cidade e UF manualmente.'
           : 'Localização bloqueada. Ative a permissão nas configurações do dispositivo ou preencha cidade e UF.');
         return;
       }
-      if (!await Location.hasServicesEnabledAsync()) {
-        report('A localização do dispositivo está desativada. Ative-a ou preencha cidade e UF.');
-        return;
-      }
       const addresses = await Promise.race([
         (async () => {
+          if (!await Location.hasServicesEnabledAsync()) {
+            throw new Error('services-disabled');
+          }
+          if (expired || !mounted.current) return [];
           const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (expired || !mounted.current) return [];
           stage = 'address';
           return Location.reverseGeocodeAsync(position.coords);
         })(),
         new Promise((_, reject) => {
-          timeout = setTimeout(() => reject(new Error('timeout')), 20000);
+          timeout = setTimeout(() => {
+            expired = true;
+            reject(new Error('timeout'));
+          }, 20000);
         }),
       ]);
       const result = resolveAddresses(addresses);
@@ -58,18 +64,22 @@ export default function useDeviceLocation(setCity, setState) {
         return;
       }
       if (!mounted.current) return;
-      if (result.city) setCity(result.city);
-      if (result.state) setState(result.state);
+      // Não combinar um endereço parcial com cidade/UF de uma consulta anterior.
+      setCity(result.city);
+      setState(result.state);
       report(result.city && result.state
         ? `Localização preenchida: ${result.city}, ${result.state}. Confira os campos e ajuste se necessário.`
         : result.state
           ? `Estado identificado: ${result.state}. O serviço não informou a cidade; confira e complete esse campo.`
           : `Cidade identificada: ${result.city}. O serviço não informou a UF; confira e complete esse campo.`);
-    } catch {
-      report(stage === 'address'
+    } catch (error) {
+      report(error?.message === 'services-disabled'
+        ? 'A localização do dispositivo está desativada. Ative-a ou preencha cidade e UF.'
+        : stage === 'address'
         ? 'Sua posição foi obtida, mas a consulta do endereço falhou ou demorou demais. Verifique a internet e tente novamente.'
         : 'Não foi possível obter sua posição. Verifique se a localização está ativada e tente novamente.');
     } finally {
+      expired = true;
       clearTimeout(timeout);
       locationPending.current = false;
       if (mounted.current) setLocating(false);

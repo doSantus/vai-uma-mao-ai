@@ -42,7 +42,7 @@ export function DataProvider({ children }) {
       if (actor.current !== id) {
         actor.current = id;
         request.current++;
-        updateData(null); setKnown({}); setLoadError('');
+        updateData(null); setKnown({}); setLoadError(''); setRefreshing(false);
       }
       setAuthSession(next);
       if (!next) setRecovery(false);
@@ -115,7 +115,7 @@ export function DataProvider({ children }) {
   if (!isConfigured) return <View style={styles.status}>
     <Text style={styles.title}>Conecte o Supabase</Text>
     <Text style={styles.message}>O aplicativo precisa de um projeto Supabase para funcionar. Configure a URL e a chave pública no arquivo .env e reinicie o Expo.</Text>
-    <Text style={styles.message}>O passo a passo está em docs/supabase-setup.md. Nenhum login demonstrativo está ativo.</Text>
+    <Text style={styles.message}>O passo a passo está no README e em docs/etapa-05.md. Nenhum login demonstrativo está ativo.</Text>
   </View>;
   if (starting || (authSession && !data && !recovery)) return <View style={styles.status}>
     {loadError ? <><Text accessibilityRole="alert" style={styles.message}>{loadError}</Text><Button title="Tentar novamente" onPress={() => refreshData().catch(() => {})} /><Button title="Sair" variant="ghost" onPress={() => signOut().catch((e) => Alert.alert('Falha ao sair',errorMessage(e)))} /></>
